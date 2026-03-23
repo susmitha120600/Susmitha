@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agenticai-api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/agenticai
+      - REDIS_URL=redis://redis:6379/0
+      - VECTOR_DB_TYPE=faiss
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - agenticai-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: agenticai-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agenticai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - agenticai-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: agenticai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - agenticai-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: agenticai-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@agenticai.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - agenticai-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  agenticai-network:
+    driver: bridge

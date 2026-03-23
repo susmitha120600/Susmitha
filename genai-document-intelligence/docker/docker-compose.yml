@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: genai-doc-intelligence
+    ports:
+      - "8000:8000"
+      - "9090:9090"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1-aws}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-doc-intelligence}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - API_WORKERS=4
+    volumes:
+      - ../data:/app/data
+      - ../app:/app/app
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - genai-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: genai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - genai-network
+
+volumes:
+  redis-data:
+
+networks:
+  genai-network:
+    driver: bridge
